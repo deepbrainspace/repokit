@@ -1,0 +1,96 @@
+# Lefthook configuration for SuperConfig monorepo
+# Fast git hooks using Moon build system with conditional execution
+
+pre-commit:
+  parallel: true
+  commands:
+    # Rust formatting using Moon tasks
+    rust-format:
+      glob: "*.rs"
+      run: moon run --affected :format
+      stage_fixed: true
+
+    rust-lint:
+      glob: "*.rs"
+      run: moon run --affected :lint
+
+    # Python formatting and linting - only changed files
+    python-fmt:
+      glob: "*.py"
+      exclude: "crates-archive/**/*"
+      run: python -m black {staged_files}
+      stage_fixed: true
+      skip:
+        - merge
+        - rebase
+
+    python-lint:
+      glob: "*.py"
+      exclude: "crates-archive/**/*"
+      run: python -m ruff check {staged_files}
+      skip:
+        - merge
+        - rebase
+
+    # Node.js/JavaScript formatting - only changed files
+    js-fmt:
+      glob: "*.{js,jsx,ts,tsx,json}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+      skip:
+        - merge
+        - rebase
+
+    # Comprehensive formatting with dprint (Rust-based, fast)
+    dprint-fmt:
+      glob: "*.{md,yml,yaml,json,toml}"
+      run: dprint fmt {staged_files} --allow-no-files
+      stage_fixed: true
+      skip:
+        - merge
+        - rebase
+
+pre-push:
+  parallel: true
+  commands:
+    # Ensure repo is clean and Cargo.lock is in sync
+    check-clean-and-sync:
+      run: |
+        # Run affected checks to ensure Cargo.lock is up to date
+        moon run --affected :check
+        # Then check for any uncommitted changes (including updated lock files)
+        if output="$(git status --porcelain)" && [ -n "$output" ]; then
+          echo "✗ Repository has uncommitted changes. Please commit them before pushing:"
+          echo "$output"
+          exit 1
+        fi
+
+    # Optional: Run tests only for affected projects (comment out if too slow)
+    # rust-test:
+    #   glob: "*.rs"
+    #   run: moon run --affected :test
+
+    # Ensure clean formatting using Moon
+    rust-format-check:
+      glob: "*.rs"
+      run: moon run --affected :format-check
+
+    # Check for outdated dependencies
+    rust-outdated:
+      glob: "*.rs"
+      run: moon run --affected :outdated
+
+commit-msg:
+  commands:
+    # Validate conventional commits directly
+    conventional-commit:
+      run: |
+        if ! grep -qE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .{1,50}" "{1}"; then
+          echo "✗ Commit message must follow conventional commits format:"
+          echo "   type(scope): description"
+          echo "   Example: feat(superffi): add naming conversion for WASM"
+          exit 1
+        fi
+      skip:
+        - merge
+        - rebase
