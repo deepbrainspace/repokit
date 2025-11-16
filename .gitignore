@@ -37,6 +37,4 @@ coverage/
 
 **/target
 
-.guardy/cache
-
-*.exe
+.guardy

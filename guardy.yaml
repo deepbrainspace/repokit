@@ -1,0 +1,37 @@
+general:
+  debug: false
+  color: true
+
+scanner:
+  exclude_patterns:
+    - ".git/**"
+    - ".git/*"
+  max_file_size: 10
+  include_binary: false
+
+security:
+  patterns:
+    - "sk-[a-zA-Z0-9]{48}"           # OpenAI API keys
+    - "ghp_[a-zA-Z0-9]{36}"          # GitHub tokens
+    - "custom-[a-zA-Z0-9]{20,}"      # Custom pattern
+
+hooks:
+  pre_commit: true
+  commit_msg: true
+  post_checkout: true
+  pre_push: true
+
+mcp:
+  enabled: true
+  port: 8080
+
+# Sync configuration to pull files from repokit
+sync:
+  repos:
+    - name: repokit
+      repo: git@github.com:deepbrainspace/repokit.git   # SSH URL for testing SSH auth
+      version: v0.0.1                 # Branch to sync from
+      source_path: "."                                  # Root of repokit
+      dest_path: "."                                    # Root of rusttoolkit
+      exclude:
+        - ".git"                                        # Exclude git directory itself
